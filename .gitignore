@@ -22,3 +22,10 @@ Thumbs.db
 # APKs
 *.apk
 *.ap_
+# Ignore build directories
+build/
+*/build/
+release/
+debug/
+*.ap_
+*.dex
