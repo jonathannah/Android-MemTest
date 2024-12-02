@@ -24,7 +24,6 @@ Thumbs.db
 *.ap_
 # Ignore build directories
 build/
-*/build/
 release/
 debug/
 *.ap_
