@@ -53,6 +53,7 @@ Thumbs.db
 *.xml
 # Exception: Do not ignore .xml files in src/main/res
 !src/main/res/xml/*.xml
+!src/main/*.xml
 
 # NDK files
 obj/
