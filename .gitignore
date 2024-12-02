@@ -51,6 +51,8 @@ Thumbs.db
 
 # Generated XML files (e.g., APK meta-data)
 *.xml
+# Exception: Do not ignore .xml files in src/main/res
+!src/main/res/*.xml
 
 # NDK files
 obj/
