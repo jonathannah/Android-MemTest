@@ -1,31 +1,69 @@
-# Gradle
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.dex
+
+# Files for the ART/Dalvik VM
+*.art
+*.oat
+*.odex
+
+# Gradle files
 .gradle/
 build/
 */build/
 
-# Local configuration
+# Local configuration file (SDK location, etc.)
 local.properties
+
+# Proguard and R8
+proguard/
+proguard-rules.pro
+
+# IntelliJ IDEA/Android Studio settings
 .idea/
 *.iml
+*.ipr
+*.iws
 
 # Keystore files
 *.jks
 *.keystore
 
-# Logs
+# Log files
 *.log
 
 # OS-specific files
 .DS_Store
 Thumbs.db
 
-# APKs
-*.apk
-*.ap_
-# Ignore build directories
-build/
-release/
-debug/
-*.ap_
-*.dex
-*/.cxx/
+# Temporary files
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+*.orig
+
+# Generated JSON files (e.g., debugging information)
+*.json
+
+# Generated XML files (e.g., APK meta-data)
+*.xml
+
+# NDK files
+obj/
+libs/
+
+# CMake/NDK intermediate files
+.cxx/
+.externalNativeBuild/
+
+# Firebase/Crashlytics files
+crashlytics.properties
+fabric.properties
+
+# Dependency directories
+/.idea/libraries/
+node_modules/
