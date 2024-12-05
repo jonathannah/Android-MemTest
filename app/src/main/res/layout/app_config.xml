@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Folder Selector -->
+    <Button
+        android:id="@+id/btn_select_folder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Folder" />
+
+    <!-- Selected Folder -->
+    <TextView
+        android:id="@+id/tv_selected_folder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:text="Default Folder: Documents"
+        android:textSize="14sp" />
+
+    <!-- Max Write Size Dropdown -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"
+        android:text="Max Write Size (MB):"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/spinner_write_size"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Test Mode Dropdown -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"
+        android:text="Test Mode:"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/spinner_test_mode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Input Field for Loops or Time -->
+    <TextView
+        android:id="@+id/tv_input_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"
+        android:text="Number of Loops:"
+        android:textSize="16sp" />
+
+    <EditText
+        android:id="@+id/et_input_value"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number" />
+</LinearLayout>
