@@ -280,19 +280,44 @@ public class MainActivity extends AppCompatActivity {
 
         Context context = this;
 
-        File dir = context.getExternalFilesDir(null);
-        if (dir != null) {
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-            //File file = new File(dir, "memtest_results_" + timeStamp + ".txt");
-            String filePath = getSanitisedModelName() + "_memtest_results_" + timeStamp + ".csv";
 
-            StringBuilder sb = new StringBuilder(getSoCInfo());
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        //File file = new File(dir, "memtest_results_" + timeStamp + ".txt");
+        String filePath = getSanitisedModelName() + "_memtest_results_" + timeStamp + ".csv";
+
+        StringBuilder sb = new StringBuilder(getSoCInfo());
+        if(cfg.testMode == Config.TestMode.MaxTime || cfg.testMode == Config.TestMode.All) {
+            int blockSize = cfg.testMode == Config.TestMode.All ? 1024*1024 : cfg.maxWriteSize;
+            int loops = cfg.testMode == Config.TestMode.All ? 1000 : cfg.loopsOrTime;
+
+            double exeTime = runLoopMemTest(loops, blockSize);
+
+            sb.append("\n\nLoop Test");
+            sb.append("\nLoops,Time (s)");
+            sb.append(String.format(Locale.getDefault(),"\n%d,%f", blockSize, exeTime));
+        }
+
+        if(cfg.testMode == Config.TestMode.MaxTime || cfg.testMode == Config.TestMode.All) {
+            int timeMS = cfg.testMode == Config.TestMode.All ? 1000 : cfg.loopsOrTime;
+            int blockSize = cfg.testMode == Config.TestMode.All ? 32*1024*1024 : cfg.maxWriteSize;
+
+            long bytesWritten = runTimedMemTest(timeMS, blockSize);
+
+            sb.append("\n\nTime Test");
+            sb.append("\nTime (ms),Bytes");
+            sb.append(String.format(Locale.getDefault(),"\n%d,%d", timeMS, bytesWritten));
+            sb.append('\n');
+        }
+
+        if(cfg.testMode == Config.TestMode.Sweep || cfg.testMode == Config.TestMode.All) {
+
             final int LOOP_ITERATIONS = cfg.loopsOrTime;
             final int MAX_BLOCK_SIZE = 1024 * 1024 * cfg.maxWriteSize;
-            final int INITIAL_BLOCK = 1024 ;//* 500;
+            final int INITIAL_BLOCK = 1024;//* 500;
 
-            JMemTestData[] resultsData = runMemTest(LOOP_ITERATIONS, INITIAL_BLOCK, MAX_BLOCK_SIZE);
-            sb.append(String.format(Locale.getDefault(),"\nLoop size: %d Block size: %d", LOOP_ITERATIONS, MAX_BLOCK_SIZE));
+            JMemTestData[] resultsData = runSweepMemTest(LOOP_ITERATIONS, INITIAL_BLOCK, MAX_BLOCK_SIZE);
+            sb.append("\n\nSweep Test");
+            sb.append(String.format(Locale.getDefault(), "\nLoop size: %d Block size: %d", LOOP_ITERATIONS, MAX_BLOCK_SIZE));
 
             sb.append("\nsize, deltaRunTime, deltaUserCPU, deltaSysCPU, sum1, sum2\n");
 
@@ -300,12 +325,12 @@ public class MainActivity extends AppCompatActivity {
                 sb.append(cur.toString()).append('\n');
             }
             sb.append("\n\n");
-
-            String results = sb.toString();
-            FileUtils.writeFileToConfigFolder(this, cfg, filePath, results);
-            return "";//results;
         }
-        return "context.getExternalFilesDir failed.  Unable to open csv file";
+
+        String results = sb.toString();
+        FileUtils.writeFileToConfigFolder(this, cfg, filePath, results);
+        return "";//results;
+
     }
 
     public static String getCpuInfo(String indent) {
@@ -344,9 +369,9 @@ public class MainActivity extends AppCompatActivity {
      * A native method that is implemented by the 'apptest' native library,
      * which is packaged with this application.
      */
-    public native JMemTestData[] runMemTest(int loopIterations, int initialBlockSize, long maxBlockSize);
-    public native double runMemTest2(int loopIterations, int blockSize);
-    public native int runMemTest3(double runtimeSecs, int blockSize);
+    public native JMemTestData[] runSweepMemTest(int loopIterations, int initialBlockSize, long maxBlockSize);
+    public native double runLoopMemTest(int loopIterations, int blockSize);
+    public native long runTimedMemTest(int runtimeMSecs, int blockSize);
     public native boolean isNeonSupported();
     public native String getCPUFamilyName();
     public native ArrayList<String> getArmFeatures();

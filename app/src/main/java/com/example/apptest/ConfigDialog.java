@@ -60,10 +60,10 @@ public class ConfigDialog {
         spinnerWriteSize.setSelection(java.util.Arrays.asList(writeSizes).indexOf(Integer.toString(config.maxWriteSize)));
 
         // Populate Test Mode Dropdown
-        String[] testModes = {"Sweep", "Max Loops", "Max Time"};
-        ArrayAdapter<String> testModeAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, testModes);
+
+        ArrayAdapter<String> testModeAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, Config.TestMode.testModes);
         spinnerTestMode.setAdapter(testModeAdapter);
-        spinnerTestMode.setSelection(java.util.Arrays.asList(testModes).indexOf(config.testMode));
+        spinnerTestMode.setSelection(java.util.Arrays.asList(Config.TestMode.testModes).indexOf(config.testMode.label()));
 
         // Update label and input based on test mode
         spinnerTestMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -99,7 +99,7 @@ public class ConfigDialog {
             String input = spinnerWriteSize.getSelectedItem().toString();
             config.maxWriteSize = input.isEmpty() ? 32 : Integer.parseInt(input);
 
-            config.testMode = spinnerTestMode.getSelectedItem().toString();
+            config.testMode = Config.TestMode.lookup(spinnerTestMode.getSelectedItem().toString());
 
             input = etInputValue.getText().toString();
             config.loopsOrTime = input.isEmpty() ? 0 : Integer.parseInt(input);

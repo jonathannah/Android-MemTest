@@ -26,9 +26,8 @@ struct MemTestData {
     //MemTestData(const MemTestData& cpy) : size(cpy.size), delta(cpy.delta), sum1(cpy.sum1), sum2(cpy.sum2){}
 };
 
-
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_example_apptest_MainActivity_runMemTest(
+Java_com_example_apptest_MainActivity_runSweepMemTest(
         JNIEnv* env,
         jobject /* this */,
         jint loopIterations,
@@ -126,7 +125,7 @@ Java_com_example_apptest_MainActivity_runMemTest(
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
-Java_com_example_apptest_MainActivity_runMemTest2(
+Java_com_example_apptest_MainActivity_runLoopMemTest(
     JNIEnv* env,
     jobject /* this */,
     jint loopIterations,
@@ -141,6 +140,12 @@ Java_com_example_apptest_MainActivity_runMemTest2(
         src[i] = 100;
     }
 
+    int sourceSum = 0;
+
+    for(int i = 0; i < blockSize; i++){
+        sourceSum += src[i];
+    }
+
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < loopIterations; ++i) {
         std::memcpy(const_cast<char*>(dst), const_cast<char*>(src), blockSize);
@@ -150,44 +155,75 @@ Java_com_example_apptest_MainActivity_runMemTest2(
 
     std::chrono::duration<double> diffWrite = end - start;
 
+    int destSum = 0;
+    for(int i = 0; i < blockSize; i++){
+        destSum += dst[i];
+    }
+
+    if(sourceSum != destSum)
+    {
+        return 0.0;
+    }
+
     delete[] src;
     delete[] dst;
 
     return static_cast<jdouble>(diffWrite.count());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_example_apptest_MainActivity_runMemTest3(
+int sumValue = 0;
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_example_apptest_MainActivity_runTimedMemTest(
         JNIEnv* env,
         jobject /* this */,
-        jdouble runtimeSecs,
+        jint runtimeMSecs,
         jint blockSize) {
 
+
+    double runtimeSecs = runtimeMSecs;
+    runtimeSecs /= 1000;
 
     volatile char* src = new char[blockSize];
     volatile char* dst = new char[blockSize];
     std::memset(const_cast<char*>(src), 0, blockSize);
-    for(int i = 0; i <= blockSize - 1024; i += 1024)
+    for(int i = 0; i < blockSize; i++)
     {
-        src[i] = 100;
+        src[i] = static_cast<int_fast8_t>(i % 0xff);
     }
 
     auto start = std::chrono::high_resolution_clock::now();
     int loopCount = 0;
 
     while(true) {
-        ++loopCount;
-        std::memcpy(const_cast<char*>(dst), const_cast<char*>(src), blockSize);
+        if(loopCount %2 == 0)
+        {
+            for(int i = 0; i < blockSize; ++i)
+            {
+                dst[i] = src[i];
+            }
+        }
+        else{
+            for(int i = blockSize - 1; i >= 0; --i)
+            {
+                dst[i] = src[i];
+            }
+        }
+        //std::memcpy(const_cast<char*>(dst), const_cast<char*>(src), blockSize);
         double elapsed_seconds = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count();
         if(elapsed_seconds >= runtimeSecs) {
             break;
         }
+        ++loopCount;
     }
 
     delete[] src;
     delete[] dst;
 
-    return static_cast<jdouble>(loopCount);
+    int64_t totalBytesWritten = loopCount;
+    totalBytesWritten *= static_cast<int64_t>(blockSize);
+
+    return static_cast<jlong>(totalBytesWritten);
 }
 
 

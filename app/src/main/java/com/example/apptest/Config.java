@@ -15,8 +15,39 @@ public class Config {
 
     public String folderPath;
     public int maxWriteSize;
-    public String testMode;       // Default test mode
+    public TestMode testMode;       // Default test mode
     public int loopsOrTime;             // Default loops or time
+
+    enum TestMode{
+        All("All"),
+        Sweep("Sweep)"),
+        Loop ("Loop"),
+        MaxTime ("Max Time");
+
+        private final String label;
+
+        TestMode(String label){
+            this.label = label;
+        }
+
+        // Getter method
+        public String label() {
+            return label;
+        }
+
+        public static final String[] testModes = {All.label, Sweep.label, Loop.label, MaxTime.label};
+
+        public static TestMode lookup(String val)
+        {
+            try{
+                return TestMode.valueOf(val);
+            }
+            catch(IllegalArgumentException e)
+            {
+                return All;
+            }
+        }
+    }
 
     // Save configuration to SharedPreferences
     public void save(Context context) {
@@ -24,7 +55,7 @@ public class Config {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(KEY_FOLDER_PATH, folderPath);
         editor.putInt(KEY_MAX_WRITE_SIZE, maxWriteSize);
-        editor.putString(KEY_TEST_MODE, testMode);
+        editor.putString(KEY_TEST_MODE, testMode.label());
         editor.putInt(KEY_LOOPS_OR_TIME, loopsOrTime);
         editor.apply();
     }
@@ -36,7 +67,7 @@ public class Config {
         folderPath = prefs.getString(KEY_FOLDER_PATH, null);
 
         maxWriteSize = prefs.getInt(KEY_MAX_WRITE_SIZE, 32);
-        testMode = prefs.getString(KEY_TEST_MODE, "Sweep");
+        testMode = TestMode.lookup(prefs.getString(KEY_TEST_MODE, TestMode.All.label));
         loopsOrTime = prefs.getInt(KEY_LOOPS_OR_TIME, 1000);
     }
 
