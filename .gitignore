@@ -13,6 +13,7 @@
 .gradle/
 build/
 */build/
+*/release/
 
 # Local configuration file (SDK location, etc.)
 local.properties

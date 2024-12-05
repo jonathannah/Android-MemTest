@@ -1,15 +1,20 @@
 package com.example.apptest;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.widget.AdapterView;
 import android.widget.TextView;
 import android.content.Context;
 import android.net.Uri;
@@ -27,6 +32,20 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.lang.reflect.Method;
+import java.util.concurrent.CountDownLatch;
+
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -58,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
             this.sum2 = _sum2;
         }
 
+        private ActivityResultLauncher<Intent> folderPickerLauncher;
+        private ConfigDialog configDialog;
+
         @SuppressLint("DefaultLocale")
         @NonNull
         @Override
@@ -76,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
     // Used to load the 'apptest' library on application startup.
     static {
         System.loadLibrary("apptest");
@@ -83,12 +106,51 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
 
+    ConfigDialog configDialog;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // Load saved configuration
+        Config config = new Config();
+        config.load(this);
+
+        // Register the ActivityResultLauncher
+        ActivityResultLauncher<Intent> folderPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri folderUri = result.getData().getData();
+                        if (configDialog != null) {
+                            configDialog.handleFolderPickerResult(folderUri);
+                        }
+                    }
+                }
+        );
+
+
+        // Show configuration dialog
+        configDialog = new ConfigDialog(this, config, folderPickerLauncher, new ConfigDialog.ConfigDialogListener() {
+            @Override
+            public void onConfigSaved() {
+                runTest(config);
+            }
+
+            @Override
+            public void onConfigCanceled() {
+                finish();
+            }
+        });
+
+        configDialog.show();
+
+    }
+
+    void runTest(Config config){
 
         StringBuilder results = new StringBuilder();
         results.append(getCPUFamilyName());
@@ -106,41 +168,19 @@ public class MainActivity extends AppCompatActivity {
         results.append('\n');
         results.append(getComprehensiveSoCInfo("     "));
         results.append('\n');
-        results.append(startMemTest());
+        results.append(startMemTest(config));
         TextView tv = binding.sampleText;
         tv.setText(results.toString());
 
-        Context context = this;
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        //File file = new File(dir, "memtest_results_" + timeStamp + ".txt");
 
-        File dir = context.getExternalFilesDir(null);
-        if (dir != null) {
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-            //File file = new File(dir, "memtest_results_" + timeStamp + ".txt");
+        String filePath = getSanitisedModelName() + "_sysscan_results_" + timeStamp + ".txt";
 
-            String filePath = getSanitisedModelName() + "_sysscan_results_" + timeStamp + ".txt";
-
-            ContentValues values = new ContentValues();
-            values.put( MediaStore.MediaColumns.DISPLAY_NAME, filePath);
-            values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
-            Uri extVolumeUri = MediaStore.Files.getContentUri("external");
-            Uri fileUri = context.getContentResolver().insert(extVolumeUri, values);
-
-            try (OutputStream outputStream = context.getContentResolver().openOutputStream(fileUri)) {
-                if (outputStream != null) {
-                    outputStream.write(results.toString().getBytes(StandardCharsets.UTF_8));
-                    outputStream.flush();
-                    outputStream.close();
-                    Log.d("MemTest", "Results written to: " + filePath);
-                }
-            }catch(IOException e){
-                //errorMsg = "/nMemTest: Failed to write results to file" + e + '\n';
-                Log.e("MemTest", "Failed to write results to file", e);
-            }
-
-
-        }
+        FileUtils.writeFileToConfigFolder(this, config, filePath, results.toString());
     }
+
+
     public static String getComprehensiveSoCInfo(String indent) {
         StringBuilder info = new StringBuilder();
 
@@ -236,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
         return info.toString();
     }
 
-    private String startMemTest(){
+    private String startMemTest(Config cfg){
 
         Context context = this;
 
@@ -247,8 +287,8 @@ public class MainActivity extends AppCompatActivity {
             String filePath = getSanitisedModelName() + "_memtest_results_" + timeStamp + ".csv";
 
             StringBuilder sb = new StringBuilder(getSoCInfo());
-            final int LOOP_ITERATIONS = 1000;
-            final int MAX_BLOCK_SIZE = 32 * 1024 * 1024;
+            final int LOOP_ITERATIONS = cfg.loopsOrTime;
+            final int MAX_BLOCK_SIZE = 1024 * 1024 * cfg.maxWriteSize;
             final int INITIAL_BLOCK = 1024 ;//* 500;
 
             JMemTestData[] resultsData = runMemTest(LOOP_ITERATIONS, INITIAL_BLOCK, MAX_BLOCK_SIZE);
@@ -262,34 +302,7 @@ public class MainActivity extends AppCompatActivity {
             sb.append("\n\n");
 
             String results = sb.toString();
-            String errorMsg = "";
-
-            ContentValues values = new ContentValues();
-            values.put( MediaStore.MediaColumns.DISPLAY_NAME, filePath);
-            values.put(MediaStore.MediaColumns.MIME_TYPE, "text/csv");
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
-            Uri extVolumeUri = MediaStore.Files.getContentUri("external");
-            Uri fileUri = context.getContentResolver().insert(extVolumeUri, values);
-
-            try (OutputStream outputStream = context.getContentResolver().openOutputStream(fileUri)) {
-                if (outputStream != null) {
-                    outputStream.write(results.getBytes(StandardCharsets.UTF_8));
-                    outputStream.flush();
-                    outputStream.close();
-                    Log.d("MemTest", "Results written to: " + filePath);
-                }
-            }catch(IOException e){
-                errorMsg = "/nMemTest: Failed to write results to file" + e + '\n';
-                Log.e("MemTest", "Failed to write results to file", e);
-            }
-
-            // Example of a call to a native method
-
-            if (!errorMsg.isEmpty()) {
-                results = errorMsg + results;
-            } else {
-                results = filePath + "\n" + results;
-            }
+            FileUtils.writeFileToConfigFolder(this, cfg, filePath, results);
             return "";//results;
         }
         return "context.getExternalFilesDir failed.  Unable to open csv file";
@@ -332,7 +345,8 @@ public class MainActivity extends AppCompatActivity {
      * which is packaged with this application.
      */
     public native JMemTestData[] runMemTest(int loopIterations, int initialBlockSize, long maxBlockSize);
-    public native JMemTestData[] runMemTest2(int loopIterations, int initialBlockSize, long maxBlockSize);
+    public native double runMemTest2(int loopIterations, int blockSize);
+    public native int runMemTest3(double runtimeSecs, int blockSize);
     public native boolean isNeonSupported();
     public native String getCPUFamilyName();
     public native ArrayList<String> getArmFeatures();
