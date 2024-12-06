@@ -286,26 +286,28 @@ public class MainActivity extends AppCompatActivity {
         String filePath = getSanitisedModelName() + "_memtest_results_" + timeStamp + ".csv";
 
         StringBuilder sb = new StringBuilder(getSoCInfo());
-        if(cfg.testMode == Config.TestMode.MaxTime || cfg.testMode == Config.TestMode.All) {
-            int blockSize = cfg.testMode == Config.TestMode.All ? 1024*1024 : cfg.maxWriteSize;
+        if(cfg.testMode == Config.TestMode.Loop || cfg.testMode == Config.TestMode.All) {
+            int blockSize = cfg.testMode == Config.TestMode.All ? 4 * 1024*1024 : 1024 * 1024 * cfg.maxWriteSize;
             int loops = cfg.testMode == Config.TestMode.All ? 1000 : cfg.loopsOrTime;
 
             double exeTime = runLoopMemTest(loops, blockSize);
 
             sb.append("\n\nLoop Test");
-            sb.append("\nLoops,Time (s)");
-            sb.append(String.format(Locale.getDefault(),"\n%d,%f", blockSize, exeTime));
+            sb.append("\nblock size, Loops,Time (s)");
+            sb.append(String.format(Locale.getDefault(),"\n%d,%d,%f", blockSize, loops, exeTime));
         }
 
         if(cfg.testMode == Config.TestMode.MaxTime || cfg.testMode == Config.TestMode.All) {
             int timeMS = cfg.testMode == Config.TestMode.All ? 1000 : cfg.loopsOrTime;
-            int blockSize = cfg.testMode == Config.TestMode.All ? 32*1024*1024 : cfg.maxWriteSize;
+            int blockSize = cfg.testMode == Config.TestMode.All ? 32*1024*1024 : 1024 * 1024 * cfg.maxWriteSize;
 
-            long bytesWritten = runTimedMemTest(timeMS, blockSize);
+            double memoryBandwidth = runTimedMemTest(timeMS, blockSize);
+
+            long endCpu = android.os.Debug.threadCpuTimeNanos();
 
             sb.append("\n\nTime Test");
-            sb.append("\nTime (ms),Bytes");
-            sb.append(String.format(Locale.getDefault(),"\n%d,%d", timeMS, bytesWritten));
+            sb.append("\nBlock Size, Time (ms),Bytes, Total CPU");
+            sb.append(String.format(Locale.getDefault(),"\n%d,%d,%f", blockSize, timeMS, memoryBandwidth));
             sb.append('\n');
         }
 
@@ -371,7 +373,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public native JMemTestData[] runSweepMemTest(int loopIterations, int initialBlockSize, long maxBlockSize);
     public native double runLoopMemTest(int loopIterations, int blockSize);
-    public native long runTimedMemTest(int runtimeMSecs, int blockSize);
+    public native double runTimedMemTest(int runtimeMSecs, int blockSize);
     public native boolean isNeonSupported();
     public native String getCPUFamilyName();
     public native ArrayList<String> getArmFeatures();

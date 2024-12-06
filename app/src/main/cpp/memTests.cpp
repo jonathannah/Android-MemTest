@@ -26,16 +26,8 @@ struct MemTestData {
     //MemTestData(const MemTestData& cpy) : size(cpy.size), delta(cpy.delta), sum1(cpy.sum1), sum2(cpy.sum2){}
 };
 
-extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_example_apptest_MainActivity_runSweepMemTest(
-        JNIEnv* env,
-        jobject /* this */,
-        jint loopIterations,
-        jint initialBlockSize,
-        jlong maxBlockSize) {
-
-    //const int MAX_ITER = 10;
-    //const int MAX_SIZE = 32 * 1024 * 1024;
+std::vector<MemTestData> sweepTestWorker(int loopIterations, int initialBlockSize, int maxBlockSize)
+{
     std::vector<MemTestData> results;
 
 
@@ -74,10 +66,10 @@ Java_com_example_apptest_MainActivity_runSweepMemTest(
 
         std::chrono::duration<double> diffWrite = end - start;
         double deltaUserCPU = (endUsage.ru_utime.tv_sec - startUsage.ru_utime.tv_sec)+
-                (endUsage.ru_utime.tv_usec - startUsage.ru_utime.tv_usec);
+                              (endUsage.ru_utime.tv_usec - startUsage.ru_utime.tv_usec);
 
         double deltaSysCPU = (endUsage.ru_stime.tv_sec - startUsage.ru_stime.tv_sec) +
-                (endUsage.ru_stime.tv_usec - startUsage.ru_stime.tv_usec);
+                             (endUsage.ru_stime.tv_usec - startUsage.ru_stime.tv_usec);
 
 
         //LOGD("Memcpy size: %d, time: %f seconds", size, diff.count());
@@ -88,6 +80,24 @@ Java_com_example_apptest_MainActivity_runSweepMemTest(
         delete[] dst;
         ++iters;
     }
+
+    return results;
+
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_com_example_apptest_MainActivity_runSweepMemTest(
+        JNIEnv* env,
+        jobject /* this */,
+        jint loopIterations,
+        jint initialBlockSize,
+        jlong maxBlockSize) {
+
+
+    std::vector<MemTestData> results = sweepTestWorker(
+            static_cast<int>(loopIterations),
+            static_cast<int>(initialBlockSize),
+            static_cast<int>(maxBlockSize));
 
     // Find the MyStruct Java class
     jclass myStructClass = env->FindClass("com/example/apptest/MainActivity$JMemTestData");
@@ -131,49 +141,18 @@ Java_com_example_apptest_MainActivity_runLoopMemTest(
     jint loopIterations,
     jint blockSize) {
 
-
-    volatile char* src = new char[blockSize];
-    volatile char* dst = new char[blockSize];
-    std::memset(const_cast<char*>(src), 0, blockSize);
-    for(int i = 0; i <= blockSize - 1024; i += 1024)
-    {
-        src[i] = 100;
-    }
-
-    int sourceSum = 0;
-
-    for(int i = 0; i < blockSize; i++){
-        sourceSum += src[i];
-    }
-
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < loopIterations; ++i) {
-        std::memcpy(const_cast<char*>(dst), const_cast<char*>(src), blockSize);
-    }
-    auto end = std::chrono::high_resolution_clock::now();
+    std::vector<MemTestData> results = sweepTestWorker(
+            static_cast<int>(loopIterations),
+            static_cast<int>(blockSize),
+            static_cast<int>(blockSize));
 
 
-    std::chrono::duration<double> diffWrite = end - start;
-
-    int destSum = 0;
-    for(int i = 0; i < blockSize; i++){
-        destSum += dst[i];
-    }
-
-    if(sourceSum != destSum)
-    {
-        return 0.0;
-    }
-
-    delete[] src;
-    delete[] dst;
-
-    return static_cast<jdouble>(diffWrite.count());
+    return static_cast<jdouble>(results[0].deltaRunTime);
 }
 
 int sumValue = 0;
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" JNIEXPORT double JNICALL
 Java_com_example_apptest_MainActivity_runTimedMemTest(
         JNIEnv* env,
         jobject /* this */,
@@ -195,6 +174,8 @@ Java_com_example_apptest_MainActivity_runTimedMemTest(
     auto start = std::chrono::high_resolution_clock::now();
     int loopCount = 0;
 
+    double elapsed_seconds;
+
     while(true) {
         if(loopCount %2 == 0)
         {
@@ -210,7 +191,7 @@ Java_com_example_apptest_MainActivity_runTimedMemTest(
             }
         }
         //std::memcpy(const_cast<char*>(dst), const_cast<char*>(src), blockSize);
-        double elapsed_seconds = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count();
+        elapsed_seconds = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count();
         if(elapsed_seconds >= runtimeSecs) {
             break;
         }
@@ -220,10 +201,11 @@ Java_com_example_apptest_MainActivity_runTimedMemTest(
     delete[] src;
     delete[] dst;
 
-    int64_t totalBytesWritten = loopCount;
-    totalBytesWritten *= static_cast<int64_t>(blockSize);
+    double totalBytesWritten = loopCount;
+    totalBytesWritten *= blockSize;
+    double bandweidth = totalBytesWritten / elapsed_seconds;
 
-    return static_cast<jlong>(totalBytesWritten);
+    return static_cast<jdouble>(bandweidth);
 }
 
 
