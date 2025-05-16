@@ -169,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
         results.append(getComprehensiveSoCInfo("     "));
         results.append('\n');
         results.append(startMemTest(config));
+        results.append(VideoDecoderEnumerator.getDecodersString());
         TextView tv = binding.sampleText;
         tv.setText(results.toString());
 
